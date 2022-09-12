@@ -114,11 +114,11 @@ def make_batch_electra(sessions):
         concat_string = inputString.strip()
         batch_input.append(encode_right_truncated(concat_string, electra_tokenizer))
         
-        label_ind = label_list.index(emotion)
+        label_ind = label_list.index(emotion) # 지금 여기서 오류가 뜨는거 같은데
         batch_labels.append(label_ind)        
         
         batch_speaker_tokens.append(padding(speaker_utt_list, electra_tokenizer))
-    
+
     batch_input_tokens = padding(batch_input, roberta_tokenizer)
     batch_labels = torch.tensor(batch_labels)    
     
