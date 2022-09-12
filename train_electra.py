@@ -79,10 +79,10 @@ def main():
 
     train_dataset = DATA_loader(train_path, dataclass)
     if sample < 1.0:
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=4,
+        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0,
                                       collate_fn=make_batch)
     else:
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4,
+        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0,
                                       collate_fn=make_batch)
     train_sample_num = int(len(train_dataloader) * sample)
 

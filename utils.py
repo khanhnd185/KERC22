@@ -3,11 +3,13 @@ import torch
 from transformers import RobertaTokenizer, RobertaModel
 from transformers import BertTokenizer, BertModel
 from transformers import GPT2Tokenizer, GPT2Model
+from transformers import ElectraTokenizerFast
 
 # roberta_tokenizer = RobertaTokenizer.from_pretrained('/data/project/rw/rung/model/roberta-large/')
 # bert_tokenizer = BertTokenizer.from_pretrained('/data/project/rw/rung/model/bert-large-uncased/')
 # gpt_tokenizer = GPT2Tokenizer.from_pretrained('/data/project/rw/rung/model/gpt2-large/')
 
+electra_tokenizer = ElectraTokenizerFast.from_pretrained("kykim/electra-kor-base")
 roberta_tokenizer = RobertaTokenizer.from_pretrained('roberta-large')
 bert_tokenizer = BertTokenizer.from_pretrained('bert-large-uncased')
 gpt_tokenizer = GPT2Tokenizer.from_pretrained('gpt2-large')
@@ -92,36 +94,35 @@ def make_batch_roberta(sessions):
     return batch_input_tokens, batch_labels, batch_speaker_tokens
 
 def make_batch_electra(sessions):
-    batch_input, batch_labels = [], []
+    batch_input, batch_labels, batch_speaker_tokens = [], [], []
     for session in sessions:
         data = session[0]
         label_list = session[1]
-
+        
         context_speaker, context, emotion, sentiment = data
         now_speaker = context_speaker[-1]
         speaker_utt_list = []
-
+        
         inputString = ""
         for turn, (speaker, utt) in enumerate(zip(context_speaker, context)):
-            inputString += '<s' + str(speaker + 1) + '> '  # s1, s2, s3...
+            inputString += '<s' + str(speaker+1) + '> ' # s1, s2, s3...
             inputString += utt + " "
-
-            if turn < len(context_speaker) - 1 and speaker == now_speaker:
-                speaker_utt_list.append(encode_right_truncated(utt, roberta_tokenizer))
-
+            
+            if turn<len(context_speaker)-1 and speaker == now_speaker:
+                speaker_utt_list.append(encode_right_truncated(utt, electra_tokenizer))
+        
         concat_string = inputString.strip()
-        batch_input.append(encode_right_truncated(concat_string, roberta_tokenizer))
-
-        if len(label_list) > 3:
-            label_ind = label_list.index(emotion)
-        else:
-            label_ind = label_list.index(sentiment)
-        batch_labels.append(label_ind)
-
+        batch_input.append(encode_right_truncated(concat_string, electra_tokenizer))
+        
+        label_ind = label_list.index(emotion)
+        batch_labels.append(label_ind)        
+        
+        batch_speaker_tokens.append(padding(speaker_utt_list, electra_tokenizer))
+    
     batch_input_tokens = padding(batch_input, roberta_tokenizer)
-    batch_labels = torch.tensor(batch_labels)
-
-    return batch_input_tokens, batch_labels
+    batch_labels = torch.tensor(batch_labels)    
+    
+    return batch_input_tokens, batch_labels, batch_speaker_tokens
 
 def make_batch_bert(sessions):
     batch_input, batch_labels, batch_speaker_tokens = [], [], []
