@@ -10,6 +10,7 @@ import pdb
 from transformers import RobertaTokenizer, RobertaModel
 from transformers import BertTokenizer, BertModel
 from transformers import GPT2Tokenizer, GPT2Model
+from transformers import ElectraTokenizerFast, ElectraModel
 
 from transformers import RobertaConfig, BertConfig
 
@@ -30,6 +31,9 @@ class ERC_model(nn.Module):
                 self.speaker_model = RobertaModel(config)
             else:
                 self.speaker_model = RobertaModel.from_pretrained(model_path)
+        elif 'electra' in model_type:
+            self.context_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
+            self.speaker_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
         elif model_type == 'bert-large-uncased':
             self.context_model = BertModel.from_pretrained(model_path)
             
