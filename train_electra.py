@@ -163,13 +163,12 @@ def main():
             best_epoch = epoch
             _SaveModel(model, save_path)
 
-        if epoch % 5 == 0:
-            logger.info('Epoch: {}'.format(epoch))
+        logger.info('Epoch: {}'.format(epoch))
 
-            logger.info(
-                'Train ## accuracy: {}, precision: {}, recall: {}, fscore: {}'.format(dev_acc, dev_pre,
-                                                                                            dev_rec, dev_fbeta))
-            logger.info('')
+        logger.info(
+            'Train ## accuracy: {}, precision: {}, recall: {}, fscore: {}'.format(dev_acc, dev_pre,
+                                                                                        dev_rec, dev_fbeta))
+        logger.info('')
 
 def _CalACC(model, dataloader):
     model.eval()
