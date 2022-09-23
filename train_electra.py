@@ -24,7 +24,7 @@ def CELoss(pred_outs, labels):
         pred_outs: [batch, clsNum]
         labels: [batch]
     """
-    loss = nn.CrossEntropyLoss()
+    loss = nn.CrossEntropyLoss(weight=torch.tensor([1.63, 3.73, 8.67]).cuda())
     loss_val = loss(pred_outs, labels)
     return loss_val
 
@@ -40,43 +40,15 @@ def main():
     freeze = args.freeze
     initial = args.initial
 
-    dataType = 'multi'
-    if dataset == 'MELD':
-        if args.dyadic:
-            dataType = 'dyadic'
-        else:
-            dataType = 'multi'
-        data_path = './dataset/MELD/' + dataType + '/'
-        DATA_loader = MELD_loader
-    elif dataset == 'EMORY':
-        data_path = './dataset/EMORY/'
-        DATA_loader = Emory_loader
-    elif dataset == 'iemocap':
-        data_path = './dataset/iemocap/'
-        DATA_loader = IEMOCAP_loader
-    elif dataset == 'dailydialog':
-        data_path = './dataset/dailydialog/'
-        DATA_loader = DD_loader
-    elif dataset == 'KERC':
-        data_path = './dataset/KERC/'
-        DATA_loader = KERC_loader
-
-    if 'roberta' in model_type:
-        make_batch = make_batch_roberta
-    elif model_type == 'bert-large-uncased':
-        make_batch = make_batch_bert
-    elif model_type == 'electra-kor-base':
-        make_batch = make_batch_electra
-    else:
-        make_batch = make_batch_gpt
+    DATA_loader = KERC_loader
+    make_batch = make_batch_electra
 
     if freeze:
         freeze_type = 'freeze'
     else:
         freeze_type = 'no_freeze'
 
-    train_path = data_path + dataset + '_train.txt'
-
+    train_path = './dataset/KERC/KERC_train_narrator.txt'
     train_dataset = DATA_loader(train_path, dataclass)
     if sample < 1.0:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0,
@@ -99,21 +71,14 @@ def main():
     logger.addHandler(fileHandler)
     logger.setLevel(level=logging.DEBUG)
 
-    """Model Loading"""
-    if 'gpt2' in model_type:
-        last = True
-    else:
-        last = False
-
     print('DataClass: ', dataclass, '!!!')  # emotion
     clsNum = len(train_dataset.labelList)
-    model = ERC_model(model_type, clsNum, last, freeze, initial)
+    model = ERC_model(model_type, clsNum, False, freeze, initial)
     model = model.cuda()
     model.train()
 
     """Training Setting"""
     training_epochs = args.epoch
-    save_term = int(training_epochs / 5)
     max_grad_norm = args.norm
     lr = args.lr
     num_training_steps = len(train_dataset) * training_epochs
@@ -124,9 +89,6 @@ def main():
                                                 num_training_steps=num_training_steps)
 
     """Input & Label Setting"""
-    best_dev_fscore, best_test_fscore = 0, 0
-    best_dev_fscore_macro, best_dev_fscore_micro, best_test_fscore_macro, best_test_fscore_micro = 0, 0, 0, 0
-    best_epoch = 0
     for epoch in range(training_epochs):
         model.train()
         for i_batch, data in enumerate(tqdm(train_dataloader)):
@@ -144,8 +106,7 @@ def main():
             loss_val = CELoss(pred_logits, batch_labels)
 
             loss_val.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(),
-                                           max_grad_norm)  # Gradient clipping is not in AdamW anymore (so you can use amp without issue)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)  # Gradient clipping is not in AdamW anymore (so you can use amp without issue)
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
@@ -156,18 +117,10 @@ def main():
         dev_pre, dev_rec, dev_fbeta, _ = precision_recall_fscore_support(dev_label_list, dev_pred_list,
                                                                          average='micro')
 
-        """Best Score & Model Save"""
-        if dev_fbeta > best_dev_fscore:
-            best_dev_fscore = dev_fbeta
-
-            best_epoch = epoch
-            _SaveModel(model, save_path)
+        _SaveModel(model, save_path, "{}.bin".format(epoch))
 
         logger.info('Epoch: {}'.format(epoch))
-
-        logger.info(
-            'Train ## accuracy: {}, precision: {}, recall: {}, fscore: {}'.format(dev_acc, dev_pre,
-                                                                                        dev_rec, dev_fbeta))
+        logger.info('Train ## accuracy: {}, precision: {}, recall: {}, fscore: {}'.format(dev_acc, dev_pre, dev_rec, dev_fbeta))
         logger.info('')
 
 def _CalACC(model, dataloader):
@@ -197,10 +150,10 @@ def _CalACC(model, dataloader):
     return acc, pred_list, label_list
 
 
-def _SaveModel(model, path):
+def _SaveModel(model, path, name='model.bin'):
     if not os.path.exists(path):
         os.makedirs(path)
-    torch.save(model.state_dict(), os.path.join(path, 'model.bin'))
+    torch.save(model.state_dict(), os.path.join(path, name))
 
 
 if __name__ == '__main__':
@@ -209,14 +162,11 @@ if __name__ == '__main__':
     """Parameters"""
     parser = argparse.ArgumentParser(description="Emotion Classifier")
     parser.add_argument("--batch", type=int, help="batch_size", default=1)
-
     parser.add_argument("--epoch", type=int, help='training epohcs', default=10)  # 12 for iemocap
     parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
     parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
     parser.add_argument("--sample", type=float, help="sampling trainign dataset", default=1.0)  #
-
     parser.add_argument("--dataset", help='MELD or EMORY or iemocap or dailydialog', default='KERC')
-
     parser.add_argument("--pretrained", help='roberta-large or bert-large-uncased or gpt2 or gpt2-large or gpt2-medium',
                         default='electra-kor-base')
     parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
