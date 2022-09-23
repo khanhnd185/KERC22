@@ -1,11 +1,5 @@
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import os, sys
-import math
-import pandas as pd
-import pdb
 
 from transformers import RobertaTokenizer, RobertaModel
 from transformers import BertTokenizer, BertModel
@@ -14,11 +8,14 @@ from transformers import ElectraTokenizerFast, ElectraModel
 
 from transformers import RobertaConfig, BertConfig
 
+from attention import *
+
 class ERC_model(nn.Module):
-    def __init__(self, model_type, clsNum, last, freeze, initial):
+    def __init__(self, model_type, clsNum, last, freeze, initial, attention='none'):
         super(ERC_model, self).__init__()
         self.gpu = True
         self.last = last
+        self.attention = attention
         
         """Model Setting"""
         # model_path = '/data/project/rw/rung/model/'+model_type
@@ -59,7 +56,13 @@ class ERC_model(nn.Module):
         """score"""
         # self.SC = nn.Linear(self.hiddenDim, self.hiddenDim)
         self.W = nn.Linear(self.hiddenDim, clsNum)
-        
+        if attention == 'dot':
+            self.attend = DotProductAttention()
+        elif attention == 'cross':
+            self.attend = CrossAttention(768, 768)
+        elif attention == 'add':
+            self.attend = AdditiveAttention(768, 0)
+
         """parameters"""
         self.train_params = list(self.context_model.parameters())+list(self.speakerGRU.parameters())+list(self.W.parameters()) # +list(self.SC.parameters())
         if not freeze:
@@ -90,8 +93,16 @@ class ERC_model(nn.Module):
             batch_speaker_output.append(speaker_track_vector)
         batch_speaker_output = torch.cat(batch_speaker_output, 0) # (batch, 1024)
                    
-        final_output = batch_context_output + batch_speaker_output
+        # final_output = batch_context_output + batch_speaker_output
         # final_output = batch_context_output + self.SC(batch_speaker_output)        
+        if self.attention == 'none':
+            final_output = batch_context_output + batch_speaker_output
+        else:
+            q = batch_speaker_output.unsqueeze(1)
+            k = batch_context_output.unsqueeze(1)
+            v = batch_context_output.unsqueeze(1)
+            final_output = self.attend(q, k, v)
+            final_output = final_output.squeeze(1)
         context_logit = self.W(final_output) # (batch, clsNum)
         
         return context_logit

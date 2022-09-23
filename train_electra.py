@@ -39,6 +39,7 @@ def main():
     model_type = args.pretrained
     freeze = args.freeze
     initial = args.initial
+    attention = args.att
 
     DATA_loader = KERC_loader
     make_batch = make_batch_electra
@@ -59,7 +60,7 @@ def main():
     train_sample_num = int(len(train_dataloader) * sample)
 
     """logging and path"""
-    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, dataclass, str(sample))
+    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, dataclass, attention)
 
     print("###Save Path### ", save_path)
     log_path = os.path.join(save_path, 'train.log')
@@ -73,7 +74,7 @@ def main():
 
     print('DataClass: ', dataclass, '!!!')  # emotion
     clsNum = len(train_dataset.labelList)
-    model = ERC_model(model_type, clsNum, False, freeze, initial)
+    model = ERC_model(model_type, clsNum, False, freeze, initial, attention=attention)
     model = model.cuda()
     model.train()
 
@@ -162,7 +163,7 @@ if __name__ == '__main__':
     """Parameters"""
     parser = argparse.ArgumentParser(description="Emotion Classifier")
     parser.add_argument("--batch", type=int, help="batch_size", default=1)
-    parser.add_argument("--epoch", type=int, help='training epohcs', default=10)  # 12 for iemocap
+    parser.add_argument("--epoch", type=int, help='training epohcs', default=30)  # 12 for iemocap
     parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
     parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
     parser.add_argument("--sample", type=float, help="sampling trainign dataset", default=1.0)  #
@@ -173,6 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
     parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
     parser.add_argument("--cls", help='emotion or sentiment', default='emotion')
+    parser.add_argument("--att", help='attention mechanism', default='none')
 
     args = parser.parse_args()
 

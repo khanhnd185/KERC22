@@ -16,6 +16,7 @@ def main():
     initial = args.initial
     input = args.input
     output = args.output
+    attention = args.att
 
     data_path = './dataset/KERC/'
     DATA_loader = KERCTest_loader
@@ -34,7 +35,7 @@ def main():
                                     collate_fn=make_batch)
 
     """logging and path"""
-    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, dataclass, "1.0")
+    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, dataclass, attention)
     modelfile = os.path.join(save_path, input)
 
     print("###Save Path### ", save_path)
@@ -43,14 +44,8 @@ def main():
         os.makedirs(save_path)
     fileHandler = logging.FileHandler(log_path)
 
-    """Model Loading"""
-    if 'gpt2' in model_type:
-        last = True
-    else:
-        last = False
-
     print('Load model: ', modelfile, '!!!')  # emotion
-    model = ERC_model(model_type, 3, last, freeze, initial)
+    model = ERC_model(model_type, 3, False, freeze, initial, attention=attention)
     model.load_state_dict(torch.load(modelfile))
     model = model.cuda()
 
@@ -110,6 +105,7 @@ if __name__ == '__main__':
     parser.add_argument("--cls", help='emotion or sentiment', default='emotion')
     parser.add_argument("--input", help='Model', default='model_origin.bin')
     parser.add_argument("--output", help='Submission name', default='submission.csv')
+    parser.add_argument("--att", help='attention mechanism', default='none')
 
     args = parser.parse_args()
 
