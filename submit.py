@@ -14,6 +14,7 @@ def main():
     model_type = args.pretrained
     freeze = args.freeze
     initial = args.initial
+    name = args.model
     input = args.input
     output = args.output
     attention = args.att
@@ -28,7 +29,7 @@ def main():
         freeze_type = 'no_freeze'
 
     test_path = data_path + dataset + '_publictest.txt'
-    test_path = data_path + 'KERC_publictest_narrator.txt'
+    test_path = data_path + input
 
     test_dataset = DATA_loader(test_path, dataclass)
     dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0,
@@ -36,7 +37,7 @@ def main():
 
     """logging and path"""
     save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, dataclass, attention)
-    modelfile = os.path.join(save_path, input)
+    modelfile = os.path.join(save_path, name)
 
     print("###Save Path### ", save_path)
     log_path = os.path.join(save_path, 'train.log')
@@ -103,7 +104,8 @@ if __name__ == '__main__':
     parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
     parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
     parser.add_argument("--cls", help='emotion or sentiment', default='emotion')
-    parser.add_argument("--input", help='Model', default='model_origin.bin')
+    parser.add_argument("--model", help='Model', default='model_origin.bin')
+    parser.add_argument("--input", help='Input file', default='KERC_publictest_narrator.txt')
     parser.add_argument("--output", help='Submission name', default='submission.csv')
     parser.add_argument("--att", help='attention mechanism', default='none')
 
