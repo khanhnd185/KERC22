@@ -1,8 +1,8 @@
 from torch.utils.data import Dataset
 
-class KERC22(Dataset):
+class KERC22Narrator(Dataset):
     def __init__(self, txt_file, include_narrator=False):
-        super(KERC22, self).__init__()
+        super(KERC22Narrator, self).__init__()
         with open(txt_file, 'r', encoding='utf-8') as f:
             dataset = f.readlines()
 
@@ -34,7 +34,6 @@ class KERC22(Dataset):
                 label_ind = self.labelList.index(emo)
                 self.dialogs.append([context_speaker[:], context[:], label_ind])
                 self.emoSet.add(emo)
-
         self.speakerNum.append(len(temp_speakerList))
 
     def __len__(self):
@@ -43,9 +42,12 @@ class KERC22(Dataset):
     def __getitem__(self, idx):
         return self.dialogs[idx]
 
-class KERC22_Test(Dataset):
+    def get_largest_speaker_num(self):
+        return max(self.speakerNum)
+
+class KERC22Narrator_Test(Dataset):
     def __init__(self, txt_file):
-        super(KERC22_Test, self).__init__()
+        super(KERC22Narrator_Test, self).__init__()
         with open(txt_file, 'r', encoding='utf-8') as f:
             dataset = f.readlines()
 
@@ -75,7 +77,6 @@ class KERC22_Test(Dataset):
 
             if speaker != "내레이터":
                 self.dialogs.append([context_speaker[:], context[:], id_list[:]])
-    
         self.speakerNum.append(len(temp_speakerList))
 
     def __len__(self):
@@ -83,3 +84,6 @@ class KERC22_Test(Dataset):
 
     def __getitem__(self, idx):
         return self.dialogs[idx]
+
+    def get_largest_speaker_num(self):
+        return max(self.speakerNum)

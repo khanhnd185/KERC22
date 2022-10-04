@@ -2,6 +2,10 @@ import torch
 from transformers import ElectraTokenizerFast
 
 electra_tokenizer = ElectraTokenizerFast.from_pretrained("kykim/electra-kor-base")
+MAX_NUM_SPEAKERS = 12
+for i in range(MAX_NUM_SPEAKERS):
+    electra_tokenizer.add_tokens(['<s{}>'.format(i+1)], special_tokens=True)
+MAX_NUM_EMBEDDINGS = len(electra_tokenizer)
 
 def encode_right_truncated(text, tokenizer, max_length=511):
     tokenized = tokenizer.tokenize(text)

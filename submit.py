@@ -1,7 +1,7 @@
 from tqdm import tqdm
 import os
 import torch
-from dataset import KERC22_Test
+from dataset import KERC22Narrator_Test
 from model import CoMPM
 from torch.utils.data import DataLoader
 import argparse, logging
@@ -23,7 +23,7 @@ def main():
         freeze_type = 'no_freeze'
 
     test_path = './dataset/KERC/' + input
-    test_dataset = KERC22_Test(test_path)
+    test_dataset = KERC22Narrator_Test(test_path)
     dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0,
                                     collate_fn=make_test_batch_electra)
 

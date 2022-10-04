@@ -11,7 +11,7 @@ from transformers import RobertaConfig, BertConfig
 from attention import *
 
 class CoMPM(nn.Module):
-    def __init__(self, model_type, clsNum, last, freeze, initial, attention='none'):
+    def __init__(self, model_type, clsNum, last, freeze, initial, num_emb, attention='none'):
         super(CoMPM, self).__init__()
         self.gpu = True
         self.last = last
@@ -31,6 +31,7 @@ class CoMPM(nn.Module):
         elif 'electra' in model_type:
             self.context_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.speaker_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
+            self.context_model.resize_token_embeddings(num_emb)
         elif model_type == 'bert-large-uncased':
             self.context_model = BertModel.from_pretrained(model_path)
             
