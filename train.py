@@ -3,7 +3,7 @@ from tqdm import tqdm
 import os
 import torch
 import torch.nn as nn
-from dataset import KERC_loader
+from dataset import KERC22
 from model import CoMPM
 
 from torch.utils.data import DataLoader
@@ -34,7 +34,7 @@ def main():
     initial = args.initial
     attention = args.att
 
-    DATA_loader = KERC_loader
+    DATA_loader = KERC22
     make_batch = make_batch_electra
 
     if freeze:

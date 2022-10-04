@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 
-class KERC_loader(Dataset):
+class KERC22(Dataset):
     def __init__(self, txt_file):
         self.dialogs = []
 
@@ -40,7 +40,7 @@ class KERC_loader(Dataset):
     def __getitem__(self, idx):
         return self.dialogs[idx], self.labelList
 
-class KERCTest_loader(Dataset):
+class KERC22_Test(Dataset):
     def __init__(self, txt_file):
         self.dialogs = []
 

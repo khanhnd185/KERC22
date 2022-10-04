@@ -1,7 +1,7 @@
 from tqdm import tqdm
 import os
 import torch
-from dataset import KERCTest_loader
+from dataset import KERC22_Test
 from model import CoMPM
 from torch.utils.data import DataLoader
 import argparse, logging
@@ -19,7 +19,7 @@ def main():
     attention = args.att
 
     data_path = './dataset/KERC/'
-    DATA_loader = KERCTest_loader
+    DATA_loader = KERC22_Test
     make_batch = make_test_batch_electra
 
     if freeze:
