@@ -9,7 +9,6 @@ from utils import make_test_batch_electra
 
 def main():
     """Dataset Loading"""
-    dataset = args.dataset
     model_type = args.pretrained
     freeze = args.freeze
     initial = args.initial
@@ -18,24 +17,18 @@ def main():
     output = args.output
     attention = args.att
 
-    data_path = './dataset/KERC/'
-    DATA_loader = KERC22_Test
-    make_batch = make_test_batch_electra
-
     if freeze:
         freeze_type = 'freeze'
     else:
         freeze_type = 'no_freeze'
 
-    test_path = data_path + dataset + '_publictest.txt'
-    test_path = data_path + input
-
-    test_dataset = DATA_loader(test_path)
+    test_path = './dataset/KERC/' + input
+    test_dataset = KERC22_Test(test_path)
     dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0,
-                                    collate_fn=make_batch)
+                                    collate_fn=make_test_batch_electra)
 
     """logging and path"""
-    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, attention)
+    save_path = os.path.join('KERC_models', model_type, initial, freeze_type, attention)
     modelfile = os.path.join(save_path, name)
 
     print("###Save Path### ", save_path)
@@ -57,8 +50,7 @@ def main():
 
 
 def generate_output(filename, id_list, pred_list):
-    emoSet = {"euphoria", "dysphoria", "neutral"}
-    emoList = sorted(emoSet)
+    emoList = sorted({"dysphoria", "euphoria", "neutral"})
 
     with open(filename, 'w') as f:
         f.write("Id,Predicted\n")
@@ -96,7 +88,6 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", type=int, help='training epohcs', default=10)  # 12 for iemocap
     parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
     parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
-    parser.add_argument("--dataset", help='MELD or EMORY or iemocap or dailydialog', default='KERC')
     parser.add_argument("--pretrained", help='roberta-large or bert-large-uncased or gpt2 or gpt2-large or gpt2-medium',
                         default='electra-kor-base')
     parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')

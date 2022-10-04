@@ -1,17 +1,20 @@
 from torch.utils.data import Dataset
 
 class KERC22(Dataset):
-    def __init__(self, txt_file):
-        self.dialogs = []
+    def __init__(self, txt_file, include_narrator=False):
+        super(KERC22, self).__init__()
+        with open(txt_file, 'r', encoding='utf-8') as f:
+            dataset = f.readlines()
 
-        f = open(txt_file, 'r', encoding='utf-8')
-        dataset = f.readlines()
-        f.close()
-        temp_speakerList = []
         context = []
         context_speaker = []
-        self.speakerNum = []
+        temp_speakerList = []
         self.emoSet = set()
+        self.dialogs = []
+        self.speakerNum = []
+
+        self.labelList = sorted({"dysphoria", "euphoria", "neutral"})
+
         for i, data in enumerate(dataset):
             if data == '\n' and len(self.dialogs) > 0:
                 self.speakerNum.append(len(temp_speakerList))
@@ -27,31 +30,32 @@ class KERC22(Dataset):
             speakerCLS = temp_speakerList.index(speaker)
             context_speaker.append(speakerCLS)
 
-            if speaker != "내레이터":
-                self.dialogs.append([context_speaker[:], context[:], emo])
+            if include_narrator == True or speaker != "내레이터":
+                label_ind = self.labelList.index(emo)
+                self.dialogs.append([context_speaker[:], context[:], label_ind])
                 self.emoSet.add(emo)
 
-        self.labelList = sorted(self.emoSet)
         self.speakerNum.append(len(temp_speakerList))
 
     def __len__(self):
         return len(self.dialogs)
 
     def __getitem__(self, idx):
-        return self.dialogs[idx], self.labelList
+        return self.dialogs[idx]
 
 class KERC22_Test(Dataset):
     def __init__(self, txt_file):
-        self.dialogs = []
+        super(KERC22_Test, self).__init__()
+        with open(txt_file, 'r', encoding='utf-8') as f:
+            dataset = f.readlines()
 
-        f = open(txt_file, 'r', encoding='utf-8')
-        dataset = f.readlines()
-        f.close()
-        temp_speakerList = []
+        id_list = []
         context = []
         context_speaker = []
-        id_list = []
+        temp_speakerList = []
+        self.dialogs = []
         self.speakerNum = []
+
         for i, data in enumerate(dataset):
             if data == '\n' and len(self.dialogs) > 0:
                 self.speakerNum.append(len(temp_speakerList))

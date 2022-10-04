@@ -27,10 +27,7 @@ def padding(ids_list, tokenizer):
 
 def make_batch_electra(sessions):
     batch_input, batch_labels, batch_speaker_tokens = [], [], []
-    for session in sessions:
-        data = session[0]
-        label_list = session[1]
-        
+    for data in sessions:
         context_speaker, context, emotion = data
         now_speaker = context_speaker[-1]
         speaker_utt_list = []
@@ -45,16 +42,13 @@ def make_batch_electra(sessions):
         
         concat_string = inputString.strip()
         batch_input.append(encode_right_truncated(concat_string, electra_tokenizer))
-        
-        label_ind = label_list.index(emotion) # 지금 여기서 오류가 뜨는거 같은데
-        batch_labels.append(label_ind)        
-        
+        batch_labels.append(emotion)        
         batch_speaker_tokens.append(padding(speaker_utt_list, electra_tokenizer))
 
     batch_input_tokens = padding(batch_input, electra_tokenizer)
     batch_labels = torch.tensor(batch_labels)    
     
-    return batch_input_tokens, batch_labels, batch_speaker_tokens
+    return batch_input_tokens, batch_speaker_tokens, batch_labels
 
 def make_test_batch_electra(sessions):
     batch_input, batch_speaker_tokens, id_list = [], [], []

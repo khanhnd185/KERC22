@@ -26,34 +26,31 @@ def CELoss(pred_outs, labels):
 ## finetune RoBETa-large
 def main():
     """Dataset Loading"""
+    input = args.input
     batch_size = args.batch
-    dataset = args.dataset
     sample = args.sample
     model_type = args.pretrained
     freeze = args.freeze
     initial = args.initial
     attention = args.att
 
-    DATA_loader = KERC22
-    make_batch = make_batch_electra
-
     if freeze:
         freeze_type = 'freeze'
     else:
         freeze_type = 'no_freeze'
 
-    train_path = './dataset/KERC/KERC_train_narrator.txt'
-    train_dataset = DATA_loader(train_path)
+    train_path = './dataset/KERC/' + input
+    train_dataset = KERC22(train_path)
     if sample < 1.0:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0,
-                                      collate_fn=make_batch)
+                                      collate_fn=make_batch_electra)
     else:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0,
-                                      collate_fn=make_batch)
+                                      collate_fn=make_batch_electra)
     train_sample_num = int(len(train_dataloader) * sample)
 
     """logging and path"""
-    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, attention)
+    save_path = os.path.join('KERC_models', model_type, initial, freeze_type, attention)
 
     print("###Save Path### ", save_path)
     log_path = os.path.join(save_path, 'train.log')
@@ -90,7 +87,7 @@ def main():
                 break
 
             """Prediction"""
-            batch_input_tokens, batch_labels, batch_speaker_tokens = data
+            batch_input_tokens, batch_speaker_tokens, batch_labels = data
             batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
 
             pred_logits = model(batch_input_tokens, batch_speaker_tokens)
@@ -126,7 +123,7 @@ def _CalACC(model, dataloader):
     with torch.no_grad():
         for i_batch, data in enumerate(dataloader):
             """Prediction"""
-            batch_input_tokens, batch_labels, batch_speaker_tokens = data
+            batch_input_tokens, batch_speaker_tokens, batch_labels = data
             batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
 
             pred_logits = model(batch_input_tokens, batch_speaker_tokens)  # (1, clsNum)
@@ -159,13 +156,13 @@ if __name__ == '__main__':
     parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
     parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
     parser.add_argument("--sample", type=float, help="sampling trainign dataset", default=1.0)  #
-    parser.add_argument("--dataset", help='MELD or EMORY or iemocap or dailydialog', default='KERC')
     parser.add_argument("--pretrained", help='roberta-large or bert-large-uncased or gpt2 or gpt2-large or gpt2-medium',
                         default='electra-kor-base')
     parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
     parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
     parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
     parser.add_argument("--att", help='attention mechanism', default='none')
+    parser.add_argument("--input", help='Input file', default='KERC_train_narrator.txt')
 
     args = parser.parse_args()
 
