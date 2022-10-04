@@ -10,9 +10,9 @@ from transformers import RobertaConfig, BertConfig
 
 from attention import *
 
-class ERC_model(nn.Module):
+class CoMPM(nn.Module):
     def __init__(self, model_type, clsNum, last, freeze, initial, attention='none'):
-        super(ERC_model, self).__init__()
+        super(CoMPM, self).__init__()
         self.gpu = True
         self.last = last
         self.attention = attention

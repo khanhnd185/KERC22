@@ -1,22 +1,16 @@
 # -*- coding: utf-8 -*-
 from tqdm import tqdm
 import os
-import random
 import torch
 import torch.nn as nn
+from dataset import KERC_loader
+from model import CoMPM
 
-from transformers import RobertaTokenizer
-from ERC_dataset import MELD_loader, Emory_loader, IEMOCAP_loader, DD_loader, KERC_loader
-from model import ERC_model
-# from ERCcombined import ERC_model
-
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
-import pdb
 import argparse, logging
 from sklearn.metrics import precision_recall_fscore_support
-
-from utils import make_batch_roberta, make_batch_bert, make_batch_gpt, make_batch_electra
+from utils import make_batch_electra
 
 
 def CELoss(pred_outs, labels):
@@ -34,7 +28,6 @@ def main():
     """Dataset Loading"""
     batch_size = args.batch
     dataset = args.dataset
-    dataclass = args.cls
     sample = args.sample
     model_type = args.pretrained
     freeze = args.freeze
@@ -50,7 +43,7 @@ def main():
         freeze_type = 'no_freeze'
 
     train_path = './dataset/KERC/KERC_train_narrator.txt'
-    train_dataset = DATA_loader(train_path, dataclass)
+    train_dataset = DATA_loader(train_path)
     if sample < 1.0:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0,
                                       collate_fn=make_batch)
@@ -60,7 +53,7 @@ def main():
     train_sample_num = int(len(train_dataloader) * sample)
 
     """logging and path"""
-    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, dataclass, attention)
+    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, attention)
 
     print("###Save Path### ", save_path)
     log_path = os.path.join(save_path, 'train.log')
@@ -72,9 +65,8 @@ def main():
     logger.addHandler(fileHandler)
     logger.setLevel(level=logging.DEBUG)
 
-    print('DataClass: ', dataclass, '!!!')  # emotion
     clsNum = len(train_dataset.labelList)
-    model = ERC_model(model_type, clsNum, False, freeze, initial, attention=attention)
+    model = CoMPM(model_type, clsNum, False, freeze, initial, attention=attention)
     model = model.cuda()
     model.train()
 
@@ -173,7 +165,6 @@ if __name__ == '__main__':
     parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
     parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
     parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
-    parser.add_argument("--cls", help='emotion or sentiment', default='emotion')
     parser.add_argument("--att", help='attention mechanism', default='none')
 
     args = parser.parse_args()

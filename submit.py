@@ -1,8 +1,8 @@
 from tqdm import tqdm
 import os
 import torch
-from ERC_dataset import KERCTest_loader
-from model import ERC_model
+from dataset import KERCTest_loader
+from model import CoMPM
 from torch.utils.data import DataLoader
 import argparse, logging
 from utils import make_test_batch_electra
@@ -10,7 +10,6 @@ from utils import make_test_batch_electra
 def main():
     """Dataset Loading"""
     dataset = args.dataset
-    dataclass = args.cls
     model_type = args.pretrained
     freeze = args.freeze
     initial = args.initial
@@ -31,12 +30,12 @@ def main():
     test_path = data_path + dataset + '_publictest.txt'
     test_path = data_path + input
 
-    test_dataset = DATA_loader(test_path, dataclass)
+    test_dataset = DATA_loader(test_path)
     dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0,
                                     collate_fn=make_batch)
 
     """logging and path"""
-    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, dataclass, attention)
+    save_path = os.path.join(dataset + '_models', model_type, initial, freeze_type, attention)
     modelfile = os.path.join(save_path, name)
 
     print("###Save Path### ", save_path)
@@ -46,7 +45,7 @@ def main():
     fileHandler = logging.FileHandler(log_path)
 
     print('Load model: ', modelfile, '!!!')  # emotion
-    model = ERC_model(model_type, 3, False, freeze, initial, attention=attention)
+    model = CoMPM(model_type, 3, False, freeze, initial, attention=attention)
     model.load_state_dict(torch.load(modelfile))
     model = model.cuda()
 
@@ -103,7 +102,6 @@ if __name__ == '__main__':
     parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
     parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
     parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
-    parser.add_argument("--cls", help='emotion or sentiment', default='emotion')
     parser.add_argument("--model", help='Model', default='model_origin.bin')
     parser.add_argument("--input", help='Input file', default='KERC_publictest_narrator.txt')
     parser.add_argument("--output", help='Submission name', default='submission.csv')
