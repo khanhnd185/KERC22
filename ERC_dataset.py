@@ -224,9 +224,10 @@ class KERC_loader(Dataset):
             speakerCLS = temp_speakerList.index(speaker)
             context_speaker.append(speakerCLS)
 
-            self.dialogs.append([context_speaker[:], context[:], emodict[emo], senti])
-            self.emoSet.add(emodict[emo])
-            self.sentiSet.add(senti)
+            if speaker != "내레이터":
+                self.dialogs.append([context_speaker[:], context[:], emodict[emo], senti])
+                self.emoSet.add(emodict[emo])
+                self.sentiSet.add(senti)
 
         self.emoList = sorted(self.emoSet)
         self.sentiList = sorted(self.sentiSet)
@@ -271,7 +272,8 @@ class KERCTest_loader(Dataset):
             speakerCLS = temp_speakerList.index(speaker)
             context_speaker.append(speakerCLS)
 
-            self.dialogs.append([context_speaker[:], context[:], id_list[:]])
+            if speaker != "내레이터":
+                self.dialogs.append([context_speaker[:], context[:], id_list[:]])
     
         self.speakerNum.append(len(temp_speakerList))
 
