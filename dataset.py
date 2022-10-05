@@ -9,7 +9,6 @@ class KERC22Narrator(Dataset):
         context = []
         context_speaker = []
         temp_speakerList = []
-        self.emoSet = set()
         self.dialogs = []
         self.speakerNum = []
 
@@ -33,7 +32,6 @@ class KERC22Narrator(Dataset):
             if include_narrator == True or speaker != "내레이터":
                 label_ind = self.labelList.index(emo)
                 self.dialogs.append([context_speaker[:], context[:], label_ind])
-                self.emoSet.add(emo)
         self.speakerNum.append(len(temp_speakerList))
 
     def __len__(self):

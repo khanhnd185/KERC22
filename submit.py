@@ -5,7 +5,7 @@ from dataset import KERC22Narrator_Test
 from model import CoMPM
 from torch.utils.data import DataLoader
 import argparse, logging
-from utils import make_test_batch_electra
+from utils import make_test_batch_electra, MAX_NUM_EMBEDDINGS
 
 def main():
     """Dataset Loading"""
@@ -38,7 +38,7 @@ def main():
     fileHandler = logging.FileHandler(log_path)
 
     print('Load model: ', modelfile, '!!!')  # emotion
-    model = CoMPM(model_type, 3, False, freeze, initial, attention=attention)
+    model = CoMPM(model_type, 3, False, freeze, initial, MAX_NUM_EMBEDDINGS, attention=attention)
     model.load_state_dict(torch.load(modelfile))
     model = model.cuda()
 
