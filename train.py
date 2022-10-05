@@ -11,6 +11,7 @@ from transformers import get_linear_schedule_with_warmup
 import argparse, logging
 from sklearn.metrics import precision_recall_fscore_support
 from utils import make_batch_electra, MAX_NUM_EMBEDDINGS
+from sam import SAM
 
 
 def CELoss(pred_outs, labels):
@@ -74,7 +75,8 @@ def main():
     num_training_steps = len(train_dataset) * training_epochs
     num_warmup_steps = len(train_dataset)
     # optimizer = torch.optim.AdamW(model.parameters(), lr=lr) # , eps=1e-06, weight_decay=0.01
-    optimizer = torch.optim.AdamW(model.train_params, lr=lr)  # , eps=1e-06, weight_decay=0.01
+    base_optimizer = torch.optim.SGD
+    optimizer = SAM(model.train_params, base_optimizer, lr=lr, momentum=0.9)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps,
                                                 num_training_steps=num_training_steps)
 
@@ -90,14 +92,18 @@ def main():
             batch_input_tokens, batch_speaker_tokens, batch_labels = data
             batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
 
+            def closure():
+                loss = CELoss(model(batch_input_tokens, batch_speaker_tokens), batch_labels)
+                loss.backward()
+                return loss
             pred_logits = model(batch_input_tokens, batch_speaker_tokens)
 
             """Loss calculation & training"""
             loss_val = CELoss(pred_logits, batch_labels)
 
             loss_val.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)  # Gradient clipping is not in AdamW anymore (so you can use amp without issue)
-            optimizer.step()
+            # torch.nn.utils.clip_grad_norm_(model.train_params, max_grad_norm)  # Gradient clipping is not in AdamW anymore (so you can use amp without issue)
+            optimizer.step(closure)
             scheduler.step()
             optimizer.zero_grad()
 

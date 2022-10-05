@@ -74,6 +74,7 @@ class CoMPM(nn.Module):
             batch_input_tokens: (batch, len)
             batch_speaker_tokens: [(speaker_utt_num, len), ..., ]
         """
+        self.speakerGRU.flatten_parameters()
         if self.last:
             batch_context_output = self.context_model(batch_input_tokens).last_hidden_state[:,-1,:] # (batch, 1024)
         else:
