@@ -3,14 +3,14 @@ from tqdm import tqdm
 import os
 import torch
 import torch.nn as nn
-from dataset import KERC22Narrator
-from model import CoMPM
+from dataset import KERC22NarratorNew
+from model import CoMPMNew
 
 from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
 import argparse, logging
 from sklearn.metrics import precision_recall_fscore_support
-from utils import make_batch_electra, MAX_NUM_EMBEDDINGS
+from utils import make_batch_electra_new, MAX_NUM_EMBEDDINGS
 
 
 def CELoss(pred_outs, labels):
@@ -40,13 +40,13 @@ def main():
         freeze_type = 'no_freeze'
 
     train_path = './dataset/KERC/' + input
-    train_dataset = KERC22Narrator(train_path)
+    train_dataset = KERC22NarratorNew(train_path)
     if sample < 1.0:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0,
-                                      collate_fn=make_batch_electra)
+                                      collate_fn=make_batch_electra_new)
     else:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0,
-                                      collate_fn=make_batch_electra)
+                                      collate_fn=make_batch_electra_new)
     train_sample_num = int(len(train_dataloader) * sample)
 
     """logging and path"""
@@ -63,7 +63,7 @@ def main():
     logger.setLevel(level=logging.DEBUG)
 
     clsNum = len(train_dataset.labelList)
-    model = CoMPM(model_type, clsNum, False, freeze, initial, MAX_NUM_EMBEDDINGS, attention=attention)
+    model = CoMPMNew(model_type, clsNum, False, freeze, initial, MAX_NUM_EMBEDDINGS, attention=attention)
     model = model.cuda()
     model.train()
 
@@ -87,10 +87,10 @@ def main():
                 break
 
             """Prediction"""
-            batch_input_tokens, batch_speaker_tokens, batch_labels = data
-            batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
+            batch_input_tokens, batch_reason_tokens, batch_speaker_tokens, batch_labels = data
+            batch_input_tokens, batch_reason_tokens, batch_labels = batch_input_tokens.cuda(), batch_reason_tokens.cuda(), batch_labels.cuda()
 
-            pred_logits = model(batch_input_tokens, batch_speaker_tokens)
+            pred_logits = model(batch_input_tokens, batch_reason_tokens, batch_speaker_tokens)
 
             """Loss calculation & training"""
             loss_val = CELoss(pred_logits, batch_labels)
@@ -123,10 +123,10 @@ def _CalACC(model, dataloader):
     with torch.no_grad():
         for i_batch, data in enumerate(tqdm(dataloader)):
             """Prediction"""
-            batch_input_tokens, batch_speaker_tokens, batch_labels = data
-            batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
+            batch_input_tokens, batch_reason_tokens, batch_speaker_tokens, batch_labels = data
+            batch_input_tokens, batch_reason_tokens, batch_labels = batch_input_tokens.cuda(), batch_reason_tokens.cuda(), batch_labels.cuda()
 
-            pred_logits = model(batch_input_tokens, batch_speaker_tokens)  # (1, clsNum)
+            pred_logits = model(batch_input_tokens, batch_reason_tokens, batch_speaker_tokens)  # (1, clsNum)
 
             """Calculation"""
             pred_label = pred_logits.argmax(1).item()

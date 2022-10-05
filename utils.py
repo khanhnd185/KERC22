@@ -14,6 +14,13 @@ def encode_right_truncated(text, tokenizer, max_length=511):
     
     return [tokenizer.cls_token_id] + ids
 
+def encode_left_truncated(text, tokenizer, max_length=511):
+    tokenized = tokenizer.tokenize(text)
+    truncated = tokenized[:max_length]    
+    ids = tokenizer.convert_tokens_to_ids(truncated)
+    
+    return [tokenizer.cls_token_id] + ids
+
 def padding(ids_list, tokenizer):
     max_len = 0
     for ids in ids_list:
@@ -31,8 +38,9 @@ def padding(ids_list, tokenizer):
 
 def make_batch_electra(sessions):
     batch_input, batch_labels, batch_speaker_tokens = [], [], []
+    batch_reason = []
     for data in sessions:
-        context_speaker, context, emotion = data
+        context_speaker, context, reason_speaker, reason, emotion = data
         now_speaker = context_speaker[-1]
         speaker_utt_list = []
         
@@ -43,21 +51,31 @@ def make_batch_electra(sessions):
             
             if turn<len(context_speaker)-1 and speaker == now_speaker:
                 speaker_utt_list.append(encode_right_truncated(utt, electra_tokenizer))
-        
+
         concat_string = inputString.strip()
         batch_input.append(encode_right_truncated(concat_string, electra_tokenizer))
+        
+        inputString = ""
+        for turn, (speaker, utt) in enumerate(zip(reason_speaker, reason)):
+            inputString += '<s' + str(speaker+1) + '> ' # s1, s2, s3...
+            inputString += utt + " "
+        concat_string = inputString.strip()
+        batch_reason.append(encode_left_truncated(concat_string, electra_tokenizer))
+        
         batch_labels.append(emotion)        
         batch_speaker_tokens.append(padding(speaker_utt_list, electra_tokenizer))
 
     batch_input_tokens = padding(batch_input, electra_tokenizer)
+    batch_reason_tokens = padding(batch_reason, electra_tokenizer)
     batch_labels = torch.tensor(batch_labels)    
     
-    return batch_input_tokens, batch_speaker_tokens, batch_labels
+    return batch_input_tokens, batch_reason_tokens, batch_speaker_tokens, batch_labels
 
 def make_test_batch_electra(sessions):
     batch_input, batch_speaker_tokens, id_list = [], [], []
+    batch_reason = []
     for session in sessions:
-        context_speaker, context, id = session
+        context_speaker, context, reason_speaker, reason, id = session
         now_speaker = context_speaker[-1]
         speaker_utt_list = []
         
@@ -71,9 +89,18 @@ def make_test_batch_electra(sessions):
         
         concat_string = inputString.strip()
         batch_input.append(encode_right_truncated(concat_string, electra_tokenizer))       
+        
+        inputString = ""
+        for turn, (speaker, utt) in enumerate(zip(reason_speaker, reason)):
+            inputString += '<s' + str(speaker+1) + '> ' # s1, s2, s3...
+            inputString += utt + " "
+        concat_string = inputString.strip()
+        batch_reason.append(encode_left_truncated(concat_string, electra_tokenizer))
+        
         id_list.append(id[-1])
         batch_speaker_tokens.append(padding(speaker_utt_list, electra_tokenizer))
 
     batch_input_tokens = padding(batch_input, electra_tokenizer)
+    batch_reason_tokens = padding(batch_reason, electra_tokenizer)
     
-    return batch_input_tokens, batch_speaker_tokens, id_list
+    return batch_input_tokens, batch_reason_tokens, batch_speaker_tokens, id_list

@@ -11,15 +11,24 @@ class KERC22Narrator(Dataset):
         temp_speakerList = []
         self.dialogs = []
         self.speakerNum = []
+        label_list = []
+        speaker_list = []
 
         self.labelList = sorted({"dysphoria", "euphoria", "neutral"})
 
         for i, data in enumerate(dataset):
-            if data == '\n' and len(self.dialogs) > 0:
+            if data == '\n':
                 self.speakerNum.append(len(temp_speakerList))
+
+                for j, s in enumerate(speaker_list):
+                    if include_narrator == True or s != "내레이터":
+                        self.dialogs.append([context_speaker[:(j+1)], context[:(j+1)], context_speaker[j:], context[j:], label_list[j]])
+
                 temp_speakerList = []
                 context = []
                 context_speaker = []
+                label_list = []
+                speaker_list = []
                 continue
             speaker, utt, emo = data.strip().split('\t')
             context.append(utt)
@@ -28,10 +37,9 @@ class KERC22Narrator(Dataset):
                 temp_speakerList.append(speaker)
             speakerCLS = temp_speakerList.index(speaker)
             context_speaker.append(speakerCLS)
+            label_list.append(self.labelList.index(emo))
+            speaker_list.append(speaker)
 
-            if include_narrator == True or speaker != "내레이터":
-                label_ind = self.labelList.index(emo)
-                self.dialogs.append([context_speaker[:], context[:], label_ind])
         self.speakerNum.append(len(temp_speakerList))
 
     def __len__(self):
@@ -55,14 +63,21 @@ class KERC22Narrator_Test(Dataset):
         temp_speakerList = []
         self.dialogs = []
         self.speakerNum = []
+        speaker_list = []
 
         for i, data in enumerate(dataset):
-            if data == '\n' and len(self.dialogs) > 0:
+            if data == '\n':
                 self.speakerNum.append(len(temp_speakerList))
+
+                for j, s in enumerate(speaker_list):
+                    if s != "내레이터":
+                        self.dialogs.append([context_speaker[:(j+1)], context[:(j+1)], context_speaker[j:], context[j:], id_list[:(j+1)]])
+
                 temp_speakerList = []
                 context = []
                 context_speaker = []
                 id_list = []
+                speaker_list = []
                 continue
             id, speaker, utt = data.strip().split('\t')
             context.append(utt)
@@ -72,9 +87,8 @@ class KERC22Narrator_Test(Dataset):
                 temp_speakerList.append(speaker)
             speakerCLS = temp_speakerList.index(speaker)
             context_speaker.append(speakerCLS)
+            speaker_list.append(speaker)
 
-            if speaker != "내레이터":
-                self.dialogs.append([context_speaker[:], context[:], id_list[:]])
         self.speakerNum.append(len(temp_speakerList))
 
     def __len__(self):

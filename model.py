@@ -30,8 +30,10 @@ class CoMPM(nn.Module):
                 self.speaker_model = RobertaModel.from_pretrained(model_path)
         elif 'electra' in model_type:
             self.context_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
+            self.reason_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.speaker_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.context_model.resize_token_embeddings(num_emb)
+            self.reason_model.resize_token_embeddings(num_emb)
         elif model_type == 'bert-large-uncased':
             self.context_model = BertModel.from_pretrained(model_path)
             
@@ -65,19 +67,21 @@ class CoMPM(nn.Module):
             self.attend = AdditiveAttention(768, 0)
 
         """parameters"""
-        self.train_params = list(self.context_model.parameters())+list(self.speakerGRU.parameters())+list(self.W.parameters()) # +list(self.SC.parameters())
+        self.train_params = list(self.context_model.parameters())+list(self.reason_model.parameters())+list(self.speakerGRU.parameters())+list(self.W.parameters()) # +list(self.SC.parameters())
         if not freeze:
             self.train_params += list(self.speaker_model.parameters())
 
-    def forward(self, batch_input_tokens, batch_speaker_tokens):
+    def forward(self, batch_input_tokens, batch_reason_tokens, batch_speaker_tokens):
         """
             batch_input_tokens: (batch, len)
             batch_speaker_tokens: [(speaker_utt_num, len), ..., ]
         """
         if self.last:
             batch_context_output = self.context_model(batch_input_tokens).last_hidden_state[:,-1,:] # (batch, 1024)
+            batch_reason_output = self.reason_model(batch_reason_tokens).last_hidden_state[:,-1,:] # (batch, 1024)
         else:
             batch_context_output = self.context_model(batch_input_tokens).last_hidden_state[:,0,:] # (batch, 1024)
+            batch_reason_output = self.reason_model(batch_reason_tokens).last_hidden_state[:,0,:] # (batch, 1024)
         
         batch_speaker_output = []
         for speaker_tokens in batch_speaker_tokens:
@@ -97,7 +101,7 @@ class CoMPM(nn.Module):
         # final_output = batch_context_output + batch_speaker_output
         # final_output = batch_context_output + self.SC(batch_speaker_output)        
         if self.attention == 'none':
-            final_output = batch_context_output + batch_speaker_output
+            final_output = batch_context_output + batch_reason_output + batch_speaker_output
         else:
             q = batch_speaker_output.unsqueeze(1)
             k = batch_context_output.unsqueeze(1)
