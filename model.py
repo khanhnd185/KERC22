@@ -32,6 +32,7 @@ class CoMPM(nn.Module):
             self.context_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.speaker_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.context_model.resize_token_embeddings(num_emb)
+            self.speaker_model.resize_token_embeddings(num_emb)
         elif model_type == 'bert-large-uncased':
             self.context_model = BertModel.from_pretrained(model_path)
             
