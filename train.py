@@ -3,7 +3,7 @@ from tqdm import tqdm
 import os
 import torch
 import torch.nn as nn
-from dataset import KERC22Narrator
+from dataset import KERC22
 from model import CoMPM
 
 from torch.utils.data import DataLoader
@@ -39,8 +39,7 @@ def main():
     else:
         freeze_type = 'no_freeze'
 
-    train_path = './dataset/KERC/' + input
-    train_dataset = KERC22Narrator(train_path)
+    train_dataset = KERC22('./dataset/KERC/train_data.tsv', label_file_name='./dataset/KERC/train_labels.csv')
     if sample < 1.0:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0,
                                       collate_fn=make_batch_electra)

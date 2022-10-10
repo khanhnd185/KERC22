@@ -1,11 +1,11 @@
 from tqdm import tqdm
 import os
 import torch
-from dataset import KERC22Narrator_Test
+from dataset import KERC22
 from model import CoMPM
 from torch.utils.data import DataLoader
 import argparse, logging
-from utils import make_test_batch_electra, MAX_NUM_EMBEDDINGS
+from utils import make_batch_electra, MAX_NUM_EMBEDDINGS
 
 def main():
     """Dataset Loading"""
@@ -22,10 +22,9 @@ def main():
     else:
         freeze_type = 'no_freeze'
 
-    test_path = './dataset/KERC/' + input
-    test_dataset = KERC22Narrator_Test(test_path)
+    test_dataset = KERC22('./dataset/KERC/public_test_data.tsv')
     dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0,
-                                    collate_fn=make_test_batch_electra)
+                                    collate_fn=make_batch_electra)
 
     """logging and path"""
     save_path = os.path.join('KERC_models', model_type, initial, freeze_type, attention)
@@ -56,7 +55,7 @@ def generate_output(filename, id_list, pred_list):
         f.write("Id,Predicted\n")
 
         for id, pred in zip(id_list, pred_list):
-            f.write("{},{}\n".format(int(id[0]), emoList[pred]))
+            f.write("{},{}\n".format(int(id), emoList[pred]))
 
 def _gen(model, dataloader):
     model.eval()
