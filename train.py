@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
 import argparse, logging
 from sklearn.metrics import precision_recall_fscore_support
-from utils import make_batch_electra, MAX_NUM_EMBEDDINGS
+from utils import tokenizer_info
 
 
 def CELoss(pred_outs, labels):
@@ -26,7 +26,6 @@ def CELoss(pred_outs, labels):
 ## finetune RoBETa-large
 def main():
     """Dataset Loading"""
-    input = args.input
     batch_size = args.batch
     sample = args.sample
     model_type = args.pretrained
@@ -39,13 +38,14 @@ def main():
     else:
         freeze_type = 'no_freeze'
 
+    max_embeds, collate_fn = tokenizer_info[model_type]
     train_dataset = KERC22('./dataset/KERC/train_data.tsv', label_file_name='./dataset/KERC/train_labels.csv')
     if sample < 1.0:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0,
-                                      collate_fn=make_batch_electra)
+                                      collate_fn=collate_fn)
     else:
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0,
-                                      collate_fn=make_batch_electra)
+                                      collate_fn=collate_fn)
     train_sample_num = int(len(train_dataloader) * sample)
 
     """logging and path"""
@@ -62,7 +62,7 @@ def main():
     logger.setLevel(level=logging.DEBUG)
 
     clsNum = len(train_dataset.labelList)
-    model = CoMPM(model_type, clsNum, False, freeze, initial, MAX_NUM_EMBEDDINGS, attention=attention)
+    model = CoMPM(model_type, clsNum, False, freeze, initial, max_embeds, attention=attention)
     model = model.cuda()
     model.train()
 
@@ -155,13 +155,12 @@ if __name__ == '__main__':
     parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
     parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
     parser.add_argument("--sample", type=float, help="sampling trainign dataset", default=1.0)  #
-    parser.add_argument("--pretrained", help='roberta-large or bert-large-uncased or gpt2 or gpt2-large or gpt2-medium',
-                        default='electra-kor-base')
+    parser.add_argument("--pretrained", help='kobert albert funnel electr',
+                        default='kobert')
     parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
     parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
     parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
     parser.add_argument("--att", help='attention mechanism', default='none')
-    parser.add_argument("--input", help='Input file', default='KERC_train_narrator.txt')
 
     args = parser.parse_args()
 

@@ -5,7 +5,7 @@ from dataset import KERC22
 from model import CoMPM
 from torch.utils.data import DataLoader
 import argparse, logging
-from utils import make_batch_electra, MAX_NUM_EMBEDDINGS
+from utils import tokenizer_info
 
 def main():
     """Dataset Loading"""
@@ -22,9 +22,10 @@ def main():
     else:
         freeze_type = 'no_freeze'
 
-    test_dataset = KERC22('./dataset/KERC/public_test_data.tsv')
+    max_embeds, collate_fn = tokenizer_info[model_type]
+    test_dataset = KERC22('./dataset/KERC/' + input)
     dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0,
-                                    collate_fn=make_batch_electra)
+                                    collate_fn=collate_fn)
 
     """logging and path"""
     save_path = os.path.join('KERC_models', model_type, initial, freeze_type, attention)
@@ -37,7 +38,7 @@ def main():
     fileHandler = logging.FileHandler(log_path)
 
     print('Load model: ', modelfile, '!!!')  # emotion
-    model = CoMPM(model_type, 3, False, freeze, initial, MAX_NUM_EMBEDDINGS, attention=attention)
+    model = CoMPM(model_type, 3, False, freeze, initial, max_embeds, attention=attention)
     model.load_state_dict(torch.load(modelfile))
     model = model.cuda()
 
@@ -87,13 +88,12 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", type=int, help='training epohcs', default=10)  # 12 for iemocap
     parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
     parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
-    parser.add_argument("--pretrained", help='roberta-large or bert-large-uncased or gpt2 or gpt2-large or gpt2-medium',
-                        default='electra-kor-base')
+    parser.add_argument("--pretrained", help='kobert albert funnel electr', default='electr')
     parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
     parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
     parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
     parser.add_argument("--model", help='Model', default='model_origin.bin')
-    parser.add_argument("--input", help='Input file', default='KERC_publictest_narrator.txt')
+    parser.add_argument("--input", help='Input file', default='public_test_data.tsv')
     parser.add_argument("--output", help='Submission name', default='submission.csv')
     parser.add_argument("--att", help='attention mechanism', default='none')
 

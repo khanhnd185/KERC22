@@ -1,12 +1,7 @@
 import torch
 import torch.nn as nn
 
-from transformers import RobertaTokenizer, RobertaModel
-from transformers import BertTokenizer, BertModel
-from transformers import GPT2Tokenizer, GPT2Model
-from transformers import ElectraTokenizerFast, ElectraModel
-
-from transformers import RobertaConfig, BertConfig
+from transformers import BertModel, AlbertModel, FunnelModel, ElectraModel
 
 from attention import *
 
@@ -17,38 +12,27 @@ class CoMPM(nn.Module):
         self.last = last
         self.attention = attention
         
-        """Model Setting"""
-        # model_path = '/data/project/rw/rung/model/'+model_type
-        model_path = model_type
-        if 'roberta' in model_type:
-            self.context_model = RobertaModel.from_pretrained(model_path)
-                    
-            if initial == 'scratch':
-                config = RobertaConfig.from_pretrained(model_path)
-                self.speaker_model = RobertaModel(config)
-            else:
-                self.speaker_model = RobertaModel.from_pretrained(model_path)
-        elif 'electra' in model_type:
+        if model_type == 'kobert':
+            self.context_model = BertModel.from_pretrained("kykim/bert-kor-base")
+            self.speaker_model = BertModel.from_pretrained("kykim/bert-kor-base")
+            self.context_model.resize_token_embeddings(num_emb)
+            self.speaker_model.resize_token_embeddings(num_emb)
+        elif model_type == 'albert':
+            self.context_model = AlbertModel.from_pretrained("kykim/albert-kor-base")
+            self.speaker_model = AlbertModel.from_pretrained("kykim/albert-kor-base")
+            self.context_model.resize_token_embeddings(num_emb)
+            self.speaker_model.resize_token_embeddings(num_emb)
+        elif model_type == 'funnel':
+            self.context_model = FunnelModel.from_pretrained("kykim/funnel-kor-base")
+            self.speaker_model = FunnelModel.from_pretrained("kykim/funnel-kor-base")
+            self.context_model.resize_token_embeddings(num_emb)
+            self.speaker_model.resize_token_embeddings(num_emb)
+        else: # electr
             self.context_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.speaker_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.context_model.resize_token_embeddings(num_emb)
             self.speaker_model.resize_token_embeddings(num_emb)
-        elif model_type == 'bert-large-uncased':
-            self.context_model = BertModel.from_pretrained(model_path)
-            
-            if initial == 'scratch':
-                config = BertConfig.from_pretrained(model_path)
-                self.speaker_model = BertModel(config)
-            else:
-                self.speaker_model = BertModel.from_pretrained(model_path)
-        else:
-            self.context_model = GPT2Model.from_pretrained(model_path)
-            tokenizer = GPT2Tokenizer.from_pretrained(model_path)
-            tokenizer.add_special_tokens({'cls_token': '[CLS]', 'pad_token': '[PAD]'})
-            self.context_model.resize_token_embeddings(len(tokenizer))
-            
-            self.speaker_model = GPT2Model.from_pretrained(model_path)
-            self.speaker_model.resize_token_embeddings(len(tokenizer))
+
         self.hiddenDim = self.context_model.config.hidden_size
         
         zero = torch.empty(2, 1, self.hiddenDim).cuda()
