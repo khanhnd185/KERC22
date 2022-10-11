@@ -46,9 +46,9 @@ def padding(ids_list, tokenizer):
     return torch.tensor(pad_ids)
 
 def make_batch_kobert(sessions):
-    batch_input, batch_labels, batch_speaker_tokens = [], [], []
+    batch_input, batch_descrip, batch_labels, batch_speaker_tokens = [], [], [], []
     for data in sessions:
-        context_speaker, context, emotion = data
+        context_speaker, context, description, emotion = data
         now_speaker = context_speaker[-1]
         speaker_utt_list = []
 
@@ -62,18 +62,25 @@ def make_batch_kobert(sessions):
 
         concat_string = inputString.strip()
         batch_input.append(encode_right_truncated(concat_string, tokenizer_kobert))
+        if description != None:
+            batch_descrip.append(encode_right_truncated(description, tokenizer_kobert))
         batch_labels.append(emotion)        
         batch_speaker_tokens.append(padding(speaker_utt_list, tokenizer_kobert))
 
     batch_input_tokens = padding(batch_input, tokenizer_kobert)
+    if len(batch_descrip) > 0:
+        batch_descrip_tokens = padding(batch_descrip, tokenizer_kobert)
+    else:
+        batch_descrip_tokens = None
+
     batch_labels = torch.tensor(batch_labels)    
 
-    return batch_input_tokens, batch_speaker_tokens, batch_labels
+    return batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens, batch_labels
 
 def make_batch_albert(sessions):
-    batch_input, batch_labels, batch_speaker_tokens = [], [], []
+    batch_input, batch_descrip, batch_labels, batch_speaker_tokens = [], [], [], []
     for data in sessions:
-        context_speaker, context, emotion = data
+        context_speaker, context, description, emotion = data
         now_speaker = context_speaker[-1]
         speaker_utt_list = []
 
@@ -87,18 +94,25 @@ def make_batch_albert(sessions):
 
         concat_string = inputString.strip()
         batch_input.append(encode_right_truncated(concat_string, tokenizer_albert))
+        if description != None:
+            batch_descrip.append(encode_right_truncated(description, tokenizer_albert))
         batch_labels.append(emotion)        
         batch_speaker_tokens.append(padding(speaker_utt_list, tokenizer_albert))
 
     batch_input_tokens = padding(batch_input, tokenizer_albert)
+    if len(batch_descrip) > 0:
+        batch_descrip_tokens = padding(batch_descrip, tokenizer_albert)
+    else:
+        batch_descrip_tokens = None
+
     batch_labels = torch.tensor(batch_labels)    
 
-    return batch_input_tokens, batch_speaker_tokens, batch_labels
+    return batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens, batch_labels
 
 def make_batch_funnel(sessions):
-    batch_input, batch_labels, batch_speaker_tokens = [], [], []
+    batch_input, batch_descrip, batch_labels, batch_speaker_tokens = [], [], [], []
     for data in sessions:
-        context_speaker, context, emotion = data
+        context_speaker, context, description, emotion = data
         now_speaker = context_speaker[-1]
         speaker_utt_list = []
 
@@ -112,18 +126,25 @@ def make_batch_funnel(sessions):
 
         concat_string = inputString.strip()
         batch_input.append(encode_right_truncated(concat_string, tokenizer_funnel))
+        if description != None:
+            batch_descrip.append(encode_right_truncated(description, tokenizer_funnel))
         batch_labels.append(emotion)        
         batch_speaker_tokens.append(padding(speaker_utt_list, tokenizer_funnel))
 
     batch_input_tokens = padding(batch_input, tokenizer_funnel)
+    if len(batch_descrip) > 0:
+        batch_descrip_tokens = padding(batch_descrip, tokenizer_funnel)
+    else:
+        batch_descrip_tokens = None
+
     batch_labels = torch.tensor(batch_labels)    
 
-    return batch_input_tokens, batch_speaker_tokens, batch_labels
+    return batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens, batch_labels
 
 def make_batch_electr(sessions):
-    batch_input, batch_labels, batch_speaker_tokens = [], [], []
+    batch_input, batch_descrip, batch_labels, batch_speaker_tokens = [], [], [], []
     for data in sessions:
-        context_speaker, context, emotion = data
+        context_speaker, context, description, emotion = data
         now_speaker = context_speaker[-1]
         speaker_utt_list = []
 
@@ -137,13 +158,20 @@ def make_batch_electr(sessions):
 
         concat_string = inputString.strip()
         batch_input.append(encode_right_truncated(concat_string, tokenizer_electr))
+        if description != None:
+            batch_descrip.append(encode_right_truncated(description, tokenizer_electr))
         batch_labels.append(emotion)        
         batch_speaker_tokens.append(padding(speaker_utt_list, tokenizer_electr))
 
     batch_input_tokens = padding(batch_input, tokenizer_electr)
+    if len(batch_descrip) > 0:
+        batch_descrip_tokens = padding(batch_descrip, tokenizer_electr)
+    else:
+        batch_descrip_tokens = None
+
     batch_labels = torch.tensor(batch_labels)    
 
-    return batch_input_tokens, batch_speaker_tokens, batch_labels
+    return batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens, batch_labels
 
 tokenizer_info = {
     'kobert': [MAX_EMBEDS_KOBERT, make_batch_kobert],

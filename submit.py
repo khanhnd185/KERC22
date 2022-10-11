@@ -67,10 +67,10 @@ def _gen(model, dataloader):
     with torch.no_grad():
         for i_batch, data in enumerate(tqdm(dataloader)):
             """Prediction"""
-            batch_input_tokens , batch_speaker_tokens, id = data
+            batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens, id = data
             batch_input_tokens = batch_input_tokens.cuda()
 
-            pred_logits = model(batch_input_tokens, batch_speaker_tokens)  # (1, clsNum)
+            pred_logits = model(batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens)  # (1, clsNum)
 
             """Calculation"""
             pred_label = pred_logits.argmax(1).item()

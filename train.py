@@ -86,10 +86,10 @@ def main():
                 break
 
             """Prediction"""
-            batch_input_tokens, batch_speaker_tokens, batch_labels = data
+            batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens, batch_labels = data
             batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
 
-            pred_logits = model(batch_input_tokens, batch_speaker_tokens)
+            pred_logits = model(batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens)
 
             """Loss calculation & training"""
             loss_val = CELoss(pred_logits, batch_labels)
@@ -122,10 +122,10 @@ def _CalACC(model, dataloader):
     with torch.no_grad():
         for i_batch, data in enumerate(tqdm(dataloader)):
             """Prediction"""
-            batch_input_tokens, batch_speaker_tokens, batch_labels = data
+            batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens, batch_labels = data
             batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
 
-            pred_logits = model(batch_input_tokens, batch_speaker_tokens)  # (1, clsNum)
+            pred_logits = model(batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens)  # (1, clsNum)
 
             """Calculation"""
             pred_label = pred_logits.argmax(1).item()

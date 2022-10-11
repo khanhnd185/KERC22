@@ -11,9 +11,9 @@ class KERC22(Dataset):
 
         context = []
         context_speaker = []
+        context_descrip = []
         dialogs = []
         pre_scene = ""
-        pre_descb = ""
         self.labelList = sorted({"dysphoria", "euphoria", "neutral"})
 
         for i, data in enumerate(data_file):
@@ -24,12 +24,12 @@ class KERC22(Dataset):
             if pre_scene != scene:
                 context = []
                 context_speaker = []
-                pre_descb = ""
+                context_descrip = []
 
-            if include_description == True and description != "NaN" and pre_descb != description:
-                context.append(description)
-                context_speaker.append("내레이터")
-                pre_descb = description
+            if description != "NaN":
+                context_descrip.append(description)
+            else:
+                context_descrip.append(None)
 
             pre_scene = scene
             context.append(sentence)
@@ -37,9 +37,9 @@ class KERC22(Dataset):
 
             if label_file_name:
                 label_ind = self.labelList.index(label)
-                dialogs.append([context_speaker[:], context[:], label_ind])
+                dialogs.append([context_speaker[:], context[:], context_descrip[:], label_ind])
             else:
-                dialogs.append([context_speaker[:], context[:], int(sentence_id)])
+                dialogs.append([context_speaker[:], context[:], context_descrip[:], int(sentence_id)])
         
         self.dialogs = []
         for i, dialog in enumerate(dialogs):

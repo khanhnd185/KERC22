@@ -15,23 +15,31 @@ class CoMPM(nn.Module):
         if model_type == 'kobert':
             self.context_model = BertModel.from_pretrained("kykim/bert-kor-base")
             self.speaker_model = BertModel.from_pretrained("kykim/bert-kor-base")
+            self.descrip_model = BertModel.from_pretrained("kykim/bert-kor-base")
             self.context_model.resize_token_embeddings(num_emb)
             self.speaker_model.resize_token_embeddings(num_emb)
+            self.descrip_model.resize_token_embeddings(num_emb)
         elif model_type == 'albert':
             self.context_model = AlbertModel.from_pretrained("kykim/albert-kor-base")
             self.speaker_model = AlbertModel.from_pretrained("kykim/albert-kor-base")
+            self.descrip_model = AlbertModel.from_pretrained("kykim/albert-kor-base")
             self.context_model.resize_token_embeddings(num_emb)
             self.speaker_model.resize_token_embeddings(num_emb)
+            self.descrip_model.resize_token_embeddings(num_emb)
         elif model_type == 'funnel':
             self.context_model = FunnelModel.from_pretrained("kykim/funnel-kor-base")
             self.speaker_model = FunnelModel.from_pretrained("kykim/funnel-kor-base")
+            self.descrip_model = FunnelModel.from_pretrained("kykim/funnel-kor-base")
             self.context_model.resize_token_embeddings(num_emb)
             self.speaker_model.resize_token_embeddings(num_emb)
+            self.descrip_model.resize_token_embeddings(num_emb)
         else: # electr
             self.context_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.speaker_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
+            self.descrip_model = ElectraModel.from_pretrained("kykim/electra-kor-base")
             self.context_model.resize_token_embeddings(num_emb)
             self.speaker_model.resize_token_embeddings(num_emb)
+            self.descrip_model.resize_token_embeddings(num_emb)
 
         self.hiddenDim = self.context_model.config.hidden_size
         
@@ -54,7 +62,7 @@ class CoMPM(nn.Module):
         if not freeze:
             self.train_params += list(self.speaker_model.parameters())
 
-    def forward(self, batch_input_tokens, batch_speaker_tokens):
+    def forward(self, batch_input_tokens, batch_descrip_tokens, batch_speaker_tokens):
         """
             batch_input_tokens: (batch, len)
             batch_speaker_tokens: [(speaker_utt_num, len), ..., ]
@@ -63,6 +71,14 @@ class CoMPM(nn.Module):
             batch_context_output = self.context_model(batch_input_tokens).last_hidden_state[:,-1,:] # (batch, 1024)
         else:
             batch_context_output = self.context_model(batch_input_tokens).last_hidden_state[:,0,:] # (batch, 1024)
+
+        if batch_descrip_tokens != None:
+            if self.last:
+                batch_descrip_output = self.descrip_model(batch_descrip_tokens.cuda()).last_hidden_state[:,-1,:] # (batch, 1024)
+            else:
+                batch_descrip_output = self.descrip_model(batch_descrip_tokens.cuda()).last_hidden_state[:,0,:] # (batch, 1024)
+        else:
+            batch_descrip_output = torch.zeros(1, self.hiddenDim).cuda()
         
         batch_speaker_output = []
         for speaker_tokens in batch_speaker_tokens:
@@ -82,7 +98,7 @@ class CoMPM(nn.Module):
         # final_output = batch_context_output + batch_speaker_output
         # final_output = batch_context_output + self.SC(batch_speaker_output)        
         if self.attention == 'none':
-            final_output = batch_context_output + batch_speaker_output
+            final_output = batch_context_output + batch_speaker_output + batch_descrip_output
         else:
             q = batch_speaker_output.unsqueeze(1)
             k = batch_context_output.unsqueeze(1)
