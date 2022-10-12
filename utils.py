@@ -83,10 +83,10 @@ def make_batch_albert(sessions):
             inputString += utt + " "
 
             if turn<len(context_speaker)-1 and speaker == now_speaker:
-                speaker_utt_list.append(encode_right_truncated(utt, tokenizer_albert))
+                speaker_utt_list.append(encode_right_truncated(utt, tokenizer_albert, max_length=255)) # Albert's max length is 256
 
         concat_string = inputString.strip()
-        batch_input.append(encode_right_truncated(concat_string, tokenizer_albert))
+        batch_input.append(encode_right_truncated(concat_string, tokenizer_albert, max_length=255)) # Albert's max length is 256 
         batch_labels.append(emotion)        
         batch_speaker_tokens.append(padding(speaker_utt_list, tokenizer_albert))
 
