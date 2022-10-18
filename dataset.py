@@ -24,7 +24,7 @@ class KERC22(Dataset):
                 context = []
                 context_speaker = []
 
-            if description == "NaN":
+            if description.lower() == "nan":
                 description = None
 
             pre_scene = scene
