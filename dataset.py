@@ -26,7 +26,7 @@ class KERC22(Dataset):
                 context_speaker = []
                 pre_descb = ""
 
-            if include_description == True and description != "NaN" and pre_descb != description:
+            if include_description == True and description.lower() != "nan" and pre_descb != description:
                 context.append(description)
                 context_speaker.append("내레이터")
                 pre_descb = description
