@@ -11,7 +11,6 @@ class KERC22(Dataset):
 
         context = []
         context_speaker = []
-        context_descrip = []
         dialogs = []
         pre_scene = ""
         self.labelList = sorted({"dysphoria", "euphoria", "neutral"})
@@ -24,12 +23,9 @@ class KERC22(Dataset):
             if pre_scene != scene:
                 context = []
                 context_speaker = []
-                context_descrip = []
 
-            if description != "NaN":
-                context_descrip.append(description)
-            else:
-                context_descrip.append(None)
+            if description == "NaN":
+                description = None
 
             pre_scene = scene
             context.append(sentence)
@@ -37,13 +33,13 @@ class KERC22(Dataset):
 
             if label_file_name:
                 label_ind = self.labelList.index(label)
-                dialogs.append([context_speaker[:], context[:], context_descrip[:], label_ind])
+                dialogs.append([context_speaker[:], context[:], description, label_ind])
             else:
-                dialogs.append([context_speaker[:], context[:], context_descrip[:], int(sentence_id)])
+                dialogs.append([context_speaker[:], context[:], description, int(sentence_id)])
         
         self.dialogs = []
         for i, dialog in enumerate(dialogs):
-            context_speakers, context, ret = dialog
+            context_speakers, context, descrip, ret = dialog
             context_speaker_idx = []
             context_new = []
             speaker_set = []
@@ -59,7 +55,11 @@ class KERC22(Dataset):
                     data = data.replace(person, "<s{}>".format(i + 1))
                 context_new.append(data)
             
-            self.dialogs.append([context_speaker_idx, context_new, ret])
+            if descrip != None:
+                for i, person in enumerate(speaker_set):
+                    descrip = descrip.replace(person, "<s{}>".format(i + 1))
+
+            self.dialogs.append([context_speaker_idx, context_new, descrip, ret])
 
     def __len__(self):
         return len(self.dialogs)
