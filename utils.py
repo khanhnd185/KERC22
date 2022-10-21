@@ -13,15 +13,15 @@ tokenizer_electr = ElectraTokenizerFast.from_pretrained("kykim/electra-kor-base"
 condition_token = ['<s{}>'.format(i+1) for i in range(MAX_NUM_SPEAKERS)]
 special_tokens = {'additional_special_tokens': condition_token}
 
+special_token_kobert = len(tokenizer_kobert)
+special_token_albert = len(tokenizer_albert)
+special_token_funnel = len(tokenizer_funnel)
+special_token_electr = len(tokenizer_electr)
+
 tokenizer_kobert.add_special_tokens(special_tokens)
 tokenizer_albert.add_special_tokens(special_tokens)
 tokenizer_funnel.add_special_tokens(special_tokens)
 tokenizer_electr.add_special_tokens(special_tokens)
-
-MAX_EMBEDS_KOBERT = len(tokenizer_kobert)
-MAX_EMBEDS_ALBERT = len(tokenizer_albert)
-MAX_EMBEDS_FUNNEL = len(tokenizer_funnel)
-MAX_EMBEDS_ELECTR = len(tokenizer_electr)
 
 def encode_right_truncated(text, tokenizer, max_length=511):
     tokenized = tokenizer.tokenize(text)
@@ -146,8 +146,14 @@ def make_batch_electr(sessions):
     return batch_input_tokens, batch_speaker_tokens, batch_labels
 
 tokenizer_info = {
-    'kobert': [MAX_EMBEDS_KOBERT, make_batch_kobert],
-    'albert': [MAX_EMBEDS_ALBERT, make_batch_albert],
-    'funnel': [MAX_EMBEDS_FUNNEL, make_batch_funnel],
-    'electr': [MAX_EMBEDS_ELECTR, make_batch_electr]
+    'kobert': [tokenizer_kobert, special_token_kobert],
+    'albert': [tokenizer_albert, special_token_albert],
+    'funnel': [tokenizer_funnel, special_token_funnel],
+    'electr': [tokenizer_electr, special_token_electr],
 }
+
+def make_batch(sessions):
+    tokens, speakers, skips, ret = sessions[0] # fixed batch_size=1
+    ret = torch.tensor(ret)
+
+    return tokens, speakers, skips, ret
