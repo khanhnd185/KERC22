@@ -9,35 +9,15 @@ from utils import tokenizer_info, make_batch
 
 def main():
     """Dataset Loading"""
-    model_type = args.pretrained
-    freeze = args.freeze
-    initial = args.initial
-    name = args.model
-    input = args.input
-    output = args.output
-    attention = args.att
-
-    if freeze:
-        freeze_type = 'freeze'
-    else:
-        freeze_type = 'no_freeze'
-
-    tokenizer, special_token = tokenizer_info[model_type]
-    test_dataset = KERC22(tokenizer, './dataset/KERC/train_data.tsv', label_file_name='./dataset/KERC/train_labels.csv')
-    dataloader = DataLoader(test_dataset, batch_size=1, shuffle=True, num_workers=0, collate_fn=make_batch)
+    tokenizer, special_token = tokenizer_info[args.pretrained]
+    test_dataset = KERC22('./dataset/KERC/' + args.input)
+    dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0, collate_fn=make_batch)
 
     """logging and path"""
-    save_path = os.path.join('KERC_models', model_type, initial, freeze_type, attention)
-    modelfile = os.path.join(save_path, name)
-
-    print("###Save Path### ", save_path)
-    log_path = os.path.join(save_path, 'train.log')
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-    fileHandler = logging.FileHandler(log_path)
+    modelfile = os.path.join('KERC_models', args.pretrained, args.att, args.model)
 
     print('Load model: ', modelfile, '!!!')  # emotion
-    model = CoMPM(model_type, 3, special_token, tokenizer.cls_token_id, tokenizer.pad_token_id, len(tokenizer), attention=attention)
+    model = CoMPM(args.pretrained, 3, special_token, tokenizer.cls_token_id, tokenizer.pad_token_id, len(tokenizer), attention=args.att)
     model.load_state_dict(torch.load(modelfile))
     model = model.cuda()
 
@@ -45,7 +25,7 @@ def main():
     """Dev & Test evaluation"""
     model.eval()
     dev_id_list, dev_pred_list = _gen(model, dataloader)
-    generate_output(output, dev_id_list, dev_pred_list)
+    generate_output(args.output, dev_id_list, dev_pred_list)
 
 
 def generate_output(filename, id_list, pred_list):
@@ -60,37 +40,31 @@ def generate_output(filename, id_list, pred_list):
 def _gen(model, dataloader):
     model.eval()
     pred_list = []
-    id_list = []
+    label_list = []
 
     # label arragne
     with torch.no_grad():
         for i_batch, data in enumerate(tqdm(dataloader)):
             """Prediction"""
-            batch_input_tokens , batch_speaker_tokens, id = data
-            batch_input_tokens = batch_input_tokens.cuda()
+            tokens, speakers, skips, labels = data
+            labels = labels.cuda()
 
-            pred_logits = model(batch_input_tokens, batch_speaker_tokens)  # (1, clsNum)
+            pred_logits = model(tokens, speakers, skips)
 
             """Calculation"""
-            pred_label = pred_logits.argmax(1).item()
+            pred_label = pred_logits.argmax(1).tolist()
+            true_label = labels.tolist()
 
-            pred_list.append(pred_label)
-            id_list.append(id)
-    return id_list, pred_list
+            pred_list += pred_label
+            label_list += true_label
+    return label_list, pred_list
 
 if __name__ == '__main__':
     torch.cuda.empty_cache()
 
     """Parameters"""
     parser = argparse.ArgumentParser(description="Emotion Classifier")
-
-    parser.add_argument("--epoch", type=int, help='training epohcs', default=10)  # 12 for iemocap
-    parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
-    parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
     parser.add_argument("--pretrained", help='kobert albert funnel electr', default='kobert')
-    parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
-    parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
-    parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
     parser.add_argument("--model", help='Model', default='3.bin')
     parser.add_argument("--input", help='Input file', default='public_test_data.tsv')
     parser.add_argument("--output", help='Submission name', default='submission.csv')

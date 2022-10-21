@@ -26,23 +26,13 @@ def CELoss(pred_outs, labels):
 ## finetune RoBETa-large
 def main():
     """Dataset Loading"""
-    model_type = args.pretrained
-    freeze = args.freeze
-    initial = args.initial
-    attention = args.att
-
-    if freeze:
-        freeze_type = 'freeze'
-    else:
-        freeze_type = 'no_freeze'
-
-    tokenizer, special_token = tokenizer_info[model_type]
+    tokenizer, special_token = tokenizer_info[args.pretrained]
     train_dataset = KERC22(tokenizer, './dataset/KERC/train_data.tsv', label_file_name='./dataset/KERC/train_labels.csv')
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=0, collate_fn=make_batch)
     train_sample_num = len(train_dataloader)
 
     """logging and path"""
-    save_path = os.path.join('KERC_models', model_type, initial, freeze_type, attention)
+    save_path = os.path.join('KERC_models', args.pretrained, args.att)
 
     print("###Save Path### ", save_path)
     log_path = os.path.join(save_path, 'train.log')
@@ -54,7 +44,7 @@ def main():
     logger.addHandler(fileHandler)
     logger.setLevel(level=logging.DEBUG)
 
-    model = CoMPM(model_type, 3, special_token, tokenizer.cls_token_id, tokenizer.pad_token_id, len(tokenizer), attention=attention)
+    model = CoMPM(args.pretrained, 3, special_token, tokenizer.cls_token_id, tokenizer.pad_token_id, len(tokenizer), attention=args.att)
     model = model.cuda()
     model.train()
 
@@ -64,8 +54,7 @@ def main():
     lr = args.lr
     num_training_steps = len(train_dataset) * training_epochs
     num_warmup_steps = len(train_dataset)
-    # optimizer = torch.optim.AdamW(model.parameters(), lr=lr) # , eps=1e-06, weight_decay=0.01
-    optimizer = torch.optim.AdamW(model.train_params, lr=lr)  # , eps=1e-06, weight_decay=0.01
+    optimizer = torch.optim.AdamW(model.train_params, lr=lr)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps,
                                                 num_training_steps=num_training_steps)
 
@@ -106,7 +95,6 @@ def main():
 
 def _CalACC(model, dataloader):
     model.eval()
-    correct = 0
     label_list = []
     pred_list = []
 
@@ -120,8 +108,8 @@ def _CalACC(model, dataloader):
             pred_logits = model(tokens, speakers, skips)
 
             """Calculation"""
-            pred_label = pred_logits.argmax(1).item()
-            true_label = labels.item()
+            pred_label = pred_logits.argmax(1).tolist()
+            true_label = labels.tolist()
 
             pred_list += pred_label
             label_list += true_label
@@ -142,11 +130,7 @@ if __name__ == '__main__':
     parser.add_argument("--epoch", type=int, help='training epohcs', default=30)  # 12 for iemocap
     parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
     parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
-    parser.add_argument("--pretrained", help='kobert albert funnel electr',
-                        default='kobert')
-    parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
-    parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
-    parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
+    parser.add_argument("--pretrained", help='kobert albert funnel electr', default='kobert')
     parser.add_argument("--att", help='attention mechanism', default='none')
 
     args = parser.parse_args()
