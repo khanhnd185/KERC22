@@ -10,7 +10,7 @@ from utils import tokenizer_info, make_batch
 def main():
     """Dataset Loading"""
     tokenizer, special_token = tokenizer_info[args.pretrained]
-    test_dataset = KERC22('./dataset/KERC/' + args.input)
+    test_dataset = KERC22(tokenizer, './dataset/KERC/' + args.input)
     dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0, collate_fn=make_batch)
 
     """logging and path"""

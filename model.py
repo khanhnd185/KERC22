@@ -55,7 +55,7 @@ class CoMPM(nn.Module):
         zero = torch.empty(2, 1, self.hiddenDim).cuda()
         self.h0 = torch.zeros_like(zero) # (num_layers * num_directions, batch, hidden_size)
         self.speakerGRU = nn.GRU(self.hiddenDim, self.hiddenDim, 2, dropout=0.3) # (input, hidden, num_layer) (BERT_emb, BERT_emb, num_layer)
-        self.conversationGRU = nn.GRU(self.hiddenDim, self.hiddenDim, 2, dropout=0.3) # (input, hidden, num_layer) (BERT_emb, BERT_emb, num_layer)
+        self.conversationGRU = nn.GRU(self.hiddenDim, self.hiddenDim, 2, dropout=0.3, batch_first=True) # (input, hidden, num_layer) (BERT_emb, BERT_emb, num_layer)
             
         """score"""
         # self.SC = nn.Linear(self.hiddenDim, self.hiddenDim)
@@ -92,8 +92,8 @@ class CoMPM(nn.Module):
             outputs.append(output)
             
         outputs = torch.cat(outputs, 0)
-        final_output, _ = self.conversationGRU(outputs)
-        context_logit = self.W(final_output)
+        final_output, _ = self.conversationGRU(outputs.unsqueeze(0))
+        context_logit = self.W(final_output.squeeze(0))
         
         return context_logit
 
