@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from transformers import get_linear_schedule_with_warmup
 import argparse, logging
 from sklearn.metrics import precision_recall_fscore_support
-from utils import tokenizer_info
+from utils import tokenizer_info, make_batch
 
 
 def CELoss(pred_outs, labels):
@@ -26,30 +26,13 @@ def CELoss(pred_outs, labels):
 ## finetune RoBETa-large
 def main():
     """Dataset Loading"""
-    batch_size = args.batch
-    sample = args.sample
-    model_type = args.pretrained
-    freeze = args.freeze
-    initial = args.initial
-    attention = args.att
-
-    if freeze:
-        freeze_type = 'freeze'
-    else:
-        freeze_type = 'no_freeze'
-
-    max_embeds, collate_fn = tokenizer_info[model_type]
-    train_dataset = KERC22('./dataset/KERC/train_data.tsv', label_file_name='./dataset/KERC/train_labels.csv')
-    if sample < 1.0:
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=0,
-                                      collate_fn=collate_fn)
-    else:
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0,
-                                      collate_fn=collate_fn)
-    train_sample_num = int(len(train_dataloader) * sample)
+    tokenizer, special_token = tokenizer_info[args.pretrained]
+    train_dataset = KERC22(tokenizer, './dataset/KERC/train_data.tsv', label_file_name='./dataset/KERC/train_labels.csv')
+    train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=0, collate_fn=make_batch)
+    train_sample_num = len(train_dataloader)
 
     """logging and path"""
-    save_path = os.path.join('KERC_models', model_type, initial, freeze_type, attention)
+    save_path = os.path.join('KERC_models', args.pretrained, args.att)
 
     print("###Save Path### ", save_path)
     log_path = os.path.join(save_path, 'train.log')
@@ -61,8 +44,7 @@ def main():
     logger.addHandler(fileHandler)
     logger.setLevel(level=logging.DEBUG)
 
-    clsNum = len(train_dataset.labelList)
-    model = CoMPM(model_type, clsNum, False, freeze, initial, max_embeds, attention=attention)
+    model = CoMPM(args.pretrained, 3, special_token, tokenizer.cls_token_id, tokenizer.pad_token_id, len(tokenizer), attention=args.att)
     model = model.cuda()
     model.train()
 
@@ -72,8 +54,7 @@ def main():
     lr = args.lr
     num_training_steps = len(train_dataset) * training_epochs
     num_warmup_steps = len(train_dataset)
-    # optimizer = torch.optim.AdamW(model.parameters(), lr=lr) # , eps=1e-06, weight_decay=0.01
-    optimizer = torch.optim.AdamW(model.train_params, lr=lr)  # , eps=1e-06, weight_decay=0.01
+    optimizer = torch.optim.AdamW(model.train_params, lr=lr)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps,
                                                 num_training_steps=num_training_steps)
 
@@ -86,13 +67,13 @@ def main():
                 break
 
             """Prediction"""
-            batch_input_tokens, batch_speaker_tokens, batch_labels = data
-            batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
+            tokens, speakers, skips, labels = data
+            labels = labels.cuda()
 
-            pred_logits = model(batch_input_tokens, batch_speaker_tokens)
+            pred_logits = model(tokens, speakers, skips)
 
             """Loss calculation & training"""
-            loss_val = CELoss(pred_logits, batch_labels)
+            loss_val = CELoss(pred_logits, labels)
 
             loss_val.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)  # Gradient clipping is not in AdamW anymore (so you can use amp without issue)
@@ -102,19 +83,18 @@ def main():
 
         """Dev & Test evaluation"""
         model.eval()
-        dev_acc, dev_pred_list, dev_label_list = _CalACC(model, train_dataloader)
+        dev_pred_list, dev_label_list = _CalACC(model, train_dataloader)
         dev_pre, dev_rec, dev_fbeta, _ = precision_recall_fscore_support(dev_label_list, dev_pred_list,
                                                                          average='micro')
 
         _SaveModel(model, save_path, "{}.bin".format(epoch))
 
         logger.info('Epoch: {}'.format(epoch))
-        logger.info('Train ## accuracy: {}, precision: {}, recall: {}, fscore: {}'.format(dev_acc, dev_pre, dev_rec, dev_fbeta))
+        logger.info('Train ## precision: {}, recall: {}, fscore: {}'.format(dev_pre, dev_rec, dev_fbeta))
         logger.info('')
 
 def _CalACC(model, dataloader):
     model.eval()
-    correct = 0
     label_list = []
     pred_list = []
 
@@ -122,21 +102,18 @@ def _CalACC(model, dataloader):
     with torch.no_grad():
         for i_batch, data in enumerate(tqdm(dataloader)):
             """Prediction"""
-            batch_input_tokens, batch_speaker_tokens, batch_labels = data
-            batch_input_tokens, batch_labels = batch_input_tokens.cuda(), batch_labels.cuda()
+            tokens, speakers, skips, labels = data
+            labels = labels.cuda()
 
-            pred_logits = model(batch_input_tokens, batch_speaker_tokens)  # (1, clsNum)
+            pred_logits = model(tokens, speakers, skips)
 
             """Calculation"""
-            pred_label = pred_logits.argmax(1).item()
-            true_label = batch_labels.item()
+            pred_label = pred_logits.argmax(1).tolist()
+            true_label = labels.tolist()
 
-            pred_list.append(pred_label)
-            label_list.append(true_label)
-            if pred_label == true_label:
-                correct += 1
-        acc = correct / len(dataloader)
-    return acc, pred_list, label_list
+            pred_list += pred_label
+            label_list += true_label
+    return pred_list, label_list
 
 
 def _SaveModel(model, path, name='model.bin'):
@@ -150,16 +127,10 @@ if __name__ == '__main__':
 
     """Parameters"""
     parser = argparse.ArgumentParser(description="Emotion Classifier")
-    parser.add_argument("--batch", type=int, help="batch_size", default=1)
     parser.add_argument("--epoch", type=int, help='training epohcs', default=30)  # 12 for iemocap
     parser.add_argument("--norm", type=int, help="max_grad_norm", default=10)
     parser.add_argument("--lr", type=float, help="learning rate", default=1e-6)  # 1e-5
-    parser.add_argument("--sample", type=float, help="sampling trainign dataset", default=1.0)  #
-    parser.add_argument("--pretrained", help='kobert albert funnel electr',
-                        default='kobert')
-    parser.add_argument("--initial", help='pretrained or scratch', default='pretrained')
-    parser.add_argument('-dya', '--dyadic', action='store_true', help='dyadic conversation')
-    parser.add_argument('-fr', '--freeze', action='store_true', help='freezing PM')
+    parser.add_argument("--pretrained", help='kobert albert funnel electr', default='kobert')
     parser.add_argument("--att", help='attention mechanism', default='none')
 
     args = parser.parse_args()
